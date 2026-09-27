@@ -34,7 +34,7 @@ val SoftGreenBg = Color(0xFFE6F3F1)
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Home : Screen("home", "Beranda", Icons.Default.Home)
-    object Users : Screen("users", "Nasabah", Icons.Default.Person)
+    object Users : Screen("users", "Pelanggan", Icons.Default.Person)
     object History : Screen("history", "Riwayat", Icons.Default.History)
     object Admin : Screen("admin", "Daftar Admin", Icons.Default.Person)
     object Category : Screen("category", "Daftar Sampah", Icons.Default.Home)

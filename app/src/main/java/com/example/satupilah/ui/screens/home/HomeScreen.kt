@@ -133,7 +133,7 @@ fun HomeScreen(navController: NavController) {
                     onClick = { isFabExpanded = !isFabExpanded },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    shape = CircleShape
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -333,7 +333,6 @@ fun TimbangBottomSheetContent(onDismiss: () -> Unit) {
     }
 }
 
-// Withdrawal Bottom Sheet
 @Composable
 fun PencairanBottomSheetContent(onDismiss: () -> Unit) {
     var selectedNasabah by remember { mutableStateOf("") }

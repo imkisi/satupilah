@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 
-// Model data sesuai atribut tabel database 'users'
 data class UserUiModel(
     val userId: String,
     val name: String,
@@ -46,10 +45,8 @@ fun UserScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
-    // State untuk kontrol visibilitas Bottom Sheet Tambah Nasabah
     var showAddUserBottomSheet by remember { mutableStateOf(false) }
 
-    // Sample data yang merepresentasikan record tabel database 'users'
     val sampleUsers = listOf(
         UserUiModel("1", "Jane Doe Abdulsalam", "+6281234567890", "Jl. Merdeka No. 12, Bandung", "Rp120.000", "23 Sep 2026"),
         UserUiModel("2", "Budi Santoso", "+6289876543210", "Jl. Mawar No. 45, Jakarta", "Rp45.500", "20 Sep 2026"),
@@ -62,10 +59,10 @@ fun UserScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddUserBottomSheet = true }, // Membuka Bottom Sheet Form Tambah Nasabah
+                onClick = { showAddUserBottomSheet = true },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = CircleShape
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(Icons.Default.PersonAdd, contentDescription = "Tambah Nasabah")
             }
@@ -81,7 +78,7 @@ fun UserScreen(
         ) {
             item {
                 Text(
-                    text = "Daftar Nasabah",
+                    text = "Daftar Pelanggan",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Normal,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -89,14 +86,13 @@ fun UserScreen(
                 )
             }
 
-            // Search Bar
             item {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Cari Nasabah") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    placeholder = { Text("Cari Pelanggan") },
+                    trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     shape = RoundedCornerShape(28.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -108,7 +104,6 @@ fun UserScreen(
 
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // Menggunakan ListItem M3 untuk setiap item nasabah
             items(sampleUsers) { user ->
                 UserCardListItem(
                     user = user,
@@ -119,7 +114,6 @@ fun UserScreen(
             }
         }
 
-        // Pop-up Bottom Sheet: Form Tambah Nasabah Baru
         if (showAddUserBottomSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showAddUserBottomSheet = false },
@@ -133,7 +127,6 @@ fun UserScreen(
     }
 }
 
-// Komponen Form Pop-Up Tambah Nasabah (Material Design 3)
 @Composable
 fun AddUserBottomSheetContent(onDismiss: () -> Unit) {
     var nameInput by remember { mutableStateOf("") }
@@ -154,7 +147,6 @@ fun AddUserBottomSheetContent(onDismiss: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        // Input Nama Lengkap
         OutlinedTextField(
             value = nameInput,
             onValueChange = { nameInput = it },
@@ -165,7 +157,6 @@ fun AddUserBottomSheetContent(onDismiss: () -> Unit) {
             shape = RoundedCornerShape(16.dp)
         )
 
-        // Input Nomor Telepon / WA
         OutlinedTextField(
             value = phoneInput,
             onValueChange = { phoneInput = it },
@@ -177,7 +168,6 @@ fun AddUserBottomSheetContent(onDismiss: () -> Unit) {
             shape = RoundedCornerShape(16.dp)
         )
 
-        // Input Alamat
         OutlinedTextField(
             value = addressInput,
             onValueChange = { addressInput = it },
@@ -190,7 +180,6 @@ fun AddUserBottomSheetContent(onDismiss: () -> Unit) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Tombol Simpan
         Button(
             onClick = {
                 // TODO: Panggil ViewModel/API untuk INSERT INTO users
@@ -206,7 +195,6 @@ fun AddUserBottomSheetContent(onDismiss: () -> Unit) {
     }
 }
 
-// Komponen ListItem Material Design 3
 @Composable
 fun UserCardListItem(
     user: UserUiModel,
@@ -227,7 +215,7 @@ fun UserCardListItem(
             headlineContent = {
                 Text(
                     text = user.name,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )

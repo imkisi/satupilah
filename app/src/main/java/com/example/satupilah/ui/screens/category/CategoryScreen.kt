@@ -11,7 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -21,9 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
 data class WasteCategoryUi(
     val id: String,
@@ -54,9 +56,9 @@ fun CategoryScreen(navController: NavController) {
                 onClick = { showAddCategoryBottomSheet = true },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = CircleShape
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Kategori")
+                Icon(Icons.Default.NoteAdd, contentDescription = "Tambah Kategori")
             }
         }
     ) { padding ->
@@ -94,14 +96,13 @@ fun CategoryScreen(navController: NavController) {
                 }
             }
 
-            // Search Bar
             item {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Cari Sampah") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     shape = RoundedCornerShape(28.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -113,7 +114,6 @@ fun CategoryScreen(navController: NavController) {
 
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // Item Kategori Menggunakan ListItem M3
             items(sampleCategories) { item ->
                 CategoryCardListItem(
                     category = item,
@@ -122,7 +122,6 @@ fun CategoryScreen(navController: NavController) {
             }
         }
 
-        // Modal Bottom Sheet Tambah Kategori
         if (showAddCategoryBottomSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showAddCategoryBottomSheet = false },
@@ -154,7 +153,7 @@ fun CategoryCardListItem(
             headlineContent = {
                 Text(
                     text = category.name,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -248,5 +247,13 @@ fun AddCategoryBottomSheetContent(onDismiss: () -> Unit) {
         ) {
             Text("Simpan Kategori", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CategoryScreenPreview() {
+    MaterialTheme {
+        CategoryScreen(navController = rememberNavController())
     }
 }

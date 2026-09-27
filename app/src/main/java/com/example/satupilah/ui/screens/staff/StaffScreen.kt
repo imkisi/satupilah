@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -50,9 +51,9 @@ fun AdminScreen(navController: NavController) {
                 onClick = { showAddAdminBottomSheet = true },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shape = CircleShape
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Tambah Petugas")
+                Icon(Icons.Default.PersonAdd, contentDescription = "Tambah Petugas")
             }
         }
     ) { padding ->
@@ -65,7 +66,6 @@ fun AdminScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(top = 19.dp, bottom = 24.dp)
         ) {
-            // Top Bar Navigasi & Judul Rapat
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -91,14 +91,13 @@ fun AdminScreen(navController: NavController) {
                 }
             }
 
-            // Search Bar
             item {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Cari Petugas") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     shape = RoundedCornerShape(28.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -110,7 +109,6 @@ fun AdminScreen(navController: NavController) {
 
             item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            // Item Admin Menggunakan ListItem M3
             items(sampleAdmins) { admin ->
                 AdminCardListItem(
                     admin = admin,
@@ -119,7 +117,6 @@ fun AdminScreen(navController: NavController) {
             }
         }
 
-        // Modal Bottom Sheet Tambah Admin
         if (showAddAdminBottomSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showAddAdminBottomSheet = false },
@@ -151,7 +148,7 @@ fun AdminCardListItem(
             headlineContent = {
                 Text(
                     text = admin.fullName,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
