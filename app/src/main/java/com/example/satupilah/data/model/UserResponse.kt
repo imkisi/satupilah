@@ -20,22 +20,24 @@ data class UserListResponse(
 )
 
 data class UserItemResponse(
-    @SerializedName("user_id") val userId: String,
-    @SerializedName("name") val name: String,
-    @SerializedName("phone_number") val phoneNumber: String,
-    @SerializedName("address") val address: String,
-    @SerializedName("balance") val balance: String,
-    @SerializedName("created_at") val createdAt: String
+    @SerializedName("user_id") val userId: String? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("phone_number") val phoneNumber: String? = null,
+    @SerializedName("address") val address: String? = null,
+    @SerializedName("balance") val balance: String? = null,
+    @SerializedName("created_at") val createdAt: String? = null
 )
 
 // Fungsi Ekstensi (Mappers) untuk mengubah UserItemResponse dari API menjadi UserUiModel
 fun UserItemResponse.toUiModel(): UserUiModel {
+    val rawBalance = this.balance ?: "0"
+    val formattedBalance = if (rawBalance.startsWith("Rp")) rawBalance else "Rp$rawBalance"
     return UserUiModel(
-        userId = this.userId,
-        name = this.name,
-        phoneNumber = this.phoneNumber,
-        address = this.address,
-        balance = "Rp${this.balance}",
-        createdAt = this.createdAt
+        userId = this.userId ?: "",
+        name = this.name ?: "",
+        phoneNumber = this.phoneNumber ?: "",
+        address = this.address ?: "",
+        balance = formattedBalance,
+        createdAt = this.createdAt ?: ""
     )
 }

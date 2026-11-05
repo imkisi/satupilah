@@ -20,54 +20,31 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-enum class TransactionType {
-    DEPOSIT, WITHDRAWAL
-}
-
-data class TransactionItemUi(
-    val id: String,
-    val type: TransactionType,
-    val date: String,
-    val time: String,
-    val amount: String,
-    val userName: String,
-    val itemsDetail: List<String> = emptyList()
-)
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.satupilah.data.model.TransactionItemUi
+import com.example.satupilah.data.model.TransactionType
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun HistoryScreen() {
+fun HistoryScreen(
+    viewModel: HistoryViewModel = viewModel()
+) {
     var selectedFilter by remember { mutableStateOf("Semua") }
 
-    val sampleTransactions = listOf(
-        TransactionItemUi(
-            id = "1",
-            type = TransactionType.DEPOSIT,
-            date = "23 September",
-            time = "08.46",
-            amount = "Rp75,000",
-            userName = "Jane Doe Abdulsalam",
-            itemsDetail = listOf("Karton · 728g", "Botol Plastik · 210g", "Botol Kaca · 328g")
-        ),
-        TransactionItemUi(
-            id = "2",
-            type = TransactionType.DEPOSIT,
-            date = "23 September",
-            time = "08.46",
-            amount = "Rp75,000",
-            userName = "Jane Doe Abdulsalam",
-            itemsDetail = listOf("Karton · 728g", "Botol Plastik · 210g", "Botol Kaca · 328g")
-        ),
-        TransactionItemUi(
-            id = "3",
-            type = TransactionType.WITHDRAWAL,
-            date = "23 September",
-            time = "08.46",
-            amount = "Rp120.000",
-            userName = "Jane Doe Abdulsalam"
-        )
-    )
+    LaunchedEffect(Unit) {
+        viewModel.loadHistory()
+    }
+
+    val transactionList by viewModel.transactions.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    val filteredTransactions = remember(selectedFilter, transactionList) {
+        when (selectedFilter) {
+            "Setor Sampah" -> transactionList.filter { it.type == TransactionType.DEPOSIT }
+            "Pencairan Saldo" -> transactionList.filter { it.type == TransactionType.WITHDRAWAL }
+            else -> transactionList
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -109,7 +86,7 @@ fun HistoryScreen() {
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "Hari Ini",
+            text = "Daftar Transaksi",
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Medium
@@ -117,12 +94,34 @@ fun HistoryScreen() {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 24.dp)
-        ) {
-            items(sampleTransactions) { item ->
-                HistoryCardItem(item = item)
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (filteredTransactions.isEmpty() && !isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Tidak ada riwayat transaksi",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    items(filteredTransactions, key = { it.id }) { item ->
+                        HistoryCardItem(item = item)
+                    }
+                }
+            }
+
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
             }
         }
     }

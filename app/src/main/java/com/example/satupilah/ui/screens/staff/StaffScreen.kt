@@ -1,5 +1,6 @@
 package com.example.satupilah.ui.screens.staff
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
@@ -19,31 +19,54 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import com.example.satupilah.ui.screens.home.HomeScreen
-
-data class AdminUi(
-    val id: String,
-    val username: String,
-    val fullName: String
-)
+import com.example.satupilah.data.model.AdminUi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminScreen(navController: NavController) {
+fun AdminScreen(
+    navController: NavController = rememberNavController(),
+    viewModel: StaffViewModel = viewModel()
+) {
+    val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var showAddAdminBottomSheet by remember { mutableStateOf(false) }
 
-    val sampleAdmins = listOf(
-        AdminUi("1", "admin_utama", "Admin Utama"),
-        AdminUi("2", "budi_s", "Budi Santoso"),
-        AdminUi("3", "siti_r", "Siti Rahma")
-    )
+    LaunchedEffect(Unit) {
+        viewModel.loadStaff()
+    }
+
+    val adminList by viewModel.staffList.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val successMessage by viewModel.successMessage.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    LaunchedEffect(successMessage, errorMessage) {
+        successMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+        errorMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+    }
+
+    val filteredAdmins = remember(searchQuery, adminList) {
+        if (searchQuery.isBlank()) adminList
+        else adminList.filter {
+            it.fullName.contains(searchQuery, ignoreCase = true) ||
+            it.username.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
@@ -57,62 +80,88 @@ fun AdminScreen(navController: NavController) {
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(bottom = padding.calculateBottomPadding())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(top = 19.dp, bottom = 24.dp)
-        ) {
-            item {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 0.dp, bottom = 8.dp)
-                ) {
-                    IconButton(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier.size(36.dp)
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(bottom = padding.calculateBottomPadding())
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(top = 19.dp, bottom = 24.dp)
+            ) {
+                item {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 0.dp, bottom = 8.dp)
                     ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
-                            tint = MaterialTheme.colorScheme.onSurface
+                        IconButton(
+                            onClick = { navController.popBackStack() },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Kembali",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Daftar Petugas",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Daftar Petugas",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = MaterialTheme.colorScheme.onSurface
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Cari Petugas") },
+                        trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        shape = RoundedCornerShape(28.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
                     )
+                }
+
+                item { Spacer(modifier = Modifier.height(4.dp)) }
+
+                if (filteredAdmins.isEmpty() && !isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Tidak ada data petugas",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    items(filteredAdmins, key = { it.id }) { admin ->
+                        AdminCardListItem(
+                            admin = admin,
+                            onClick = {
+                                navController.navigate("staff_profile/${admin.id}")
+                            }
+                        )
+                    }
                 }
             }
 
-            item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Cari Petugas") },
-                    trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    shape = RoundedCornerShape(28.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(4.dp)) }
-
-            items(sampleAdmins) { admin ->
-                AdminCardListItem(
-                    admin = admin,
-                    onClick = { /* TODO: Detail / Edit Admin */ }
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
         }
@@ -122,7 +171,14 @@ fun AdminScreen(navController: NavController) {
                 onDismissRequest = { showAddAdminBottomSheet = false },
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
             ) {
-                AddAdminBottomSheetContent(onDismiss = { showAddAdminBottomSheet = false })
+                AddAdminBottomSheetContent(
+                    onDismiss = { showAddAdminBottomSheet = false },
+                    onSubmit = { username, fullName ->
+                        viewModel.createStaff(username, fullName) {
+                            showAddAdminBottomSheet = false
+                        }
+                    }
+                )
             }
         }
     }
@@ -194,7 +250,10 @@ fun AdminCardListItem(
 }
 
 @Composable
-fun AddAdminBottomSheetContent(onDismiss: () -> Unit) {
+fun AddAdminBottomSheetContent(
+    onDismiss: () -> Unit,
+    onSubmit: (username: String, fullName: String) -> Unit
+) {
     var usernameInput by remember { mutableStateOf("") }
     var nameInput by remember { mutableStateOf("") }
 
@@ -216,6 +275,7 @@ fun AddAdminBottomSheetContent(onDismiss: () -> Unit) {
             value = usernameInput,
             onValueChange = { usernameInput = it },
             label = { Text("Username") },
+            placeholder = { Text("Masukkan username (cth: petugas1)") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp)
@@ -225,6 +285,7 @@ fun AddAdminBottomSheetContent(onDismiss: () -> Unit) {
             value = nameInput,
             onValueChange = { nameInput = it },
             label = { Text("Nama Lengkap") },
+            placeholder = { Text("Masukkan nama lengkap petugas") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp)
@@ -233,7 +294,12 @@ fun AddAdminBottomSheetContent(onDismiss: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick = { onDismiss() },
+            onClick = {
+                if (usernameInput.isNotBlank() && nameInput.isNotBlank()) {
+                    onSubmit(usernameInput.trim(), nameInput.trim())
+                }
+            },
+            enabled = usernameInput.isNotBlank() && nameInput.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),

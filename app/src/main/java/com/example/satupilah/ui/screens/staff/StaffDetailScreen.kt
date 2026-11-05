@@ -1,5 +1,6 @@
 package com.example.satupilah.ui.screens.staff
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,23 +13,44 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.satupilah.data.model.AdminUi
 import com.example.satupilah.ui.screens.category.DetailRowItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StaffProfileScreen(
     adminId: String = "1",
-    navController: NavController = rememberNavController()
+    navController: NavController = rememberNavController(),
+    viewModel: StaffViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showEditBottomSheet by remember { mutableStateOf(false) }
 
-    val admin = AdminUi(
+    val staffList by viewModel.staffList.collectAsState()
+    val successMessage by viewModel.successMessage.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    LaunchedEffect(successMessage, errorMessage) {
+        successMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+        errorMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+    }
+
+    val admin = staffList.find { it.id == adminId } ?: AdminUi(
         id = adminId,
         username = "admin_utama",
         fullName = "Admin Utama"
@@ -53,7 +75,6 @@ fun StaffProfileScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header Kartu Profil Petugas
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(28.dp),
@@ -122,7 +143,7 @@ fun StaffProfileScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { /* TODO: Navigasi/Form Edit Petugas */ },
+                    onClick = { showEditBottomSheet = true },
                     modifier = Modifier
                         .weight(1f)
                         .height(50.dp),
@@ -153,6 +174,23 @@ fun StaffProfileScreen(
         }
     }
 
+    if (showEditBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showEditBottomSheet = false },
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            EditAdminBottomSheetContent(
+                currentAdmin = admin,
+                onDismiss = { showEditBottomSheet = false },
+                onSubmit = { username, fullName ->
+                    viewModel.updateStaff(admin.id, username, fullName) {
+                        showEditBottomSheet = false
+                    }
+                }
+            )
+        }
+    }
+
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -161,9 +199,10 @@ fun StaffProfileScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        // TODO: DELETE FROM admins WHERE admin_id = ...
-                        showDeleteDialog = false
-                        navController.popBackStack()
+                        viewModel.deleteStaff(admin.id) {
+                            showDeleteDialog = false
+                            navController.popBackStack()
+                        }
                     }
                 ) {
                     Text("Hapus", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
@@ -175,6 +214,66 @@ fun StaffProfileScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun EditAdminBottomSheetContent(
+    currentAdmin: AdminUi,
+    onDismiss: () -> Unit,
+    onSubmit: (username: String, fullName: String) -> Unit
+) {
+    var usernameInput by remember { mutableStateOf(currentAdmin.username) }
+    var nameInput by remember { mutableStateOf(currentAdmin.fullName) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Edit Data Petugas",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        OutlinedTextField(
+            value = usernameInput,
+            onValueChange = { usernameInput = it },
+            label = { Text("Username") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        )
+
+        OutlinedTextField(
+            value = nameInput,
+            onValueChange = { nameInput = it },
+            label = { Text("Nama Lengkap") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                if (usernameInput.isNotBlank() && nameInput.isNotBlank()) {
+                    onSubmit(usernameInput.trim(), nameInput.trim())
+                }
+            },
+            enabled = usernameInput.isNotBlank() && nameInput.isNotBlank(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            shape = RoundedCornerShape(100)
+        ) {
+            Text("Simpan Perubahan", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 

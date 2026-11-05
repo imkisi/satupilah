@@ -1,5 +1,6 @@
 package com.example.satupilah.ui.screens.user
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,10 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
@@ -21,39 +19,55 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-
-data class UserUiModel(
-    val userId: String,
-    val name: String,
-    val phoneNumber: String,
-    val address: String,
-    val balance: String,
-    val createdAt: String
-)
+import com.example.satupilah.data.model.UserUiModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserScreen(
-    navController: NavController = rememberNavController()
+    navController: NavController = rememberNavController(),
+    viewModel: UserViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
-
     var showAddUserBottomSheet by remember { mutableStateOf(false) }
 
-    val sampleUsers = listOf(
-        UserUiModel("1", "Jane Doe Abdulsalam", "+6281234567890", "Jl. Merdeka No. 12, Bandung", "Rp120.000", "23 Sep 2026"),
-        UserUiModel("2", "Budi Santoso", "+6289876543210", "Jl. Mawar No. 45, Jakarta", "Rp45.500", "20 Sep 2026"),
-        UserUiModel("3", "Siti Aminah", "+6281122334455", "Jl. Anggrek No. 8, Surabaya", "Rp210.000", "15 Sep 2026"),
-        UserUiModel("4", "Ahmad Fauzi", "+6285566778899", "Jl. Diponegoro No. 88, Semarang", "Rp15.000", "10 Sep 2026"),
-        UserUiModel("5", "Dewi Lestari", "+6287788990011", "Jl. Gajah Mada No. 3, Yogyakarta", "Rp88.000", "01 Sep 2026")
-    )
+    LaunchedEffect(Unit) {
+        viewModel.loadUsers()
+    }
+
+    val userList by viewModel.users.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val successMessage by viewModel.successMessage.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    LaunchedEffect(successMessage, errorMessage) {
+        successMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+        errorMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+    }
+
+    val filteredUsers = remember(searchQuery, userList) {
+        if (searchQuery.isBlank()) userList
+        else userList.filter {
+            it.name.contains(searchQuery, ignoreCase = true) ||
+            it.phoneNumber.contains(searchQuery, ignoreCase = true) ||
+            it.address.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -68,48 +82,72 @@ fun UserScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(top = 19.dp, bottom = 24.dp)
-        ) {
-            item {
-                Text(
-                    text = "Daftar Pelanggan",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
-            item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Cari Pelanggan") },
-                    trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    shape = RoundedCornerShape(28.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(top = 19.dp, bottom = 24.dp)
+            ) {
+                item {
+                    Text(
+                        text = "Daftar Pelanggan",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
-                )
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Cari Pelanggan") },
+                        trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        shape = RoundedCornerShape(28.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    )
+                }
+
+                item { Spacer(modifier = Modifier.height(4.dp)) }
+
+                if (filteredUsers.isEmpty() && !isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Tidak ada data nasabah",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    items(filteredUsers, key = { it.userId }) { user ->
+                        UserCardListItem(
+                            user = user,
+                            onClick = {
+                                navController.navigate("user_profile/${user.userId}")
+                            }
+                        )
+                    }
+                }
             }
 
-            item { Spacer(modifier = Modifier.height(4.dp)) }
-
-            items(sampleUsers) { user ->
-                UserCardListItem(
-                    user = user,
-                    onClick = {
-                        navController.navigate("user_profile/${user.userId}")
-                    }
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
         }
@@ -120,7 +158,12 @@ fun UserScreen(
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
             ) {
                 AddUserBottomSheetContent(
-                    onDismiss = { showAddUserBottomSheet = false }
+                    onDismiss = { showAddUserBottomSheet = false },
+                    onSubmit = { name, phone, address ->
+                        viewModel.createUser(name, phone, address) {
+                            showAddUserBottomSheet = false
+                        }
+                    }
                 )
             }
         }
@@ -128,7 +171,10 @@ fun UserScreen(
 }
 
 @Composable
-fun AddUserBottomSheetContent(onDismiss: () -> Unit) {
+fun AddUserBottomSheetContent(
+    onDismiss: () -> Unit,
+    onSubmit: (name: String, phone: String, address: String) -> Unit
+) {
     var nameInput by remember { mutableStateOf("") }
     var phoneInput by remember { mutableStateOf("") }
     var addressInput by remember { mutableStateOf("") }
@@ -182,9 +228,11 @@ fun AddUserBottomSheetContent(onDismiss: () -> Unit) {
 
         Button(
             onClick = {
-                // TODO: Panggil ViewModel/API untuk INSERT INTO users
-                onDismiss()
+                if (nameInput.isNotBlank() && phoneInput.isNotBlank()) {
+                    onSubmit(nameInput.trim(), phoneInput.trim(), addressInput.trim())
+                }
             },
+            enabled = nameInput.isNotBlank() && phoneInput.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),

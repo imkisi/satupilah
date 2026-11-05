@@ -1,5 +1,6 @@
 package com.example.satupilah.ui.screens.category
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,43 +12,61 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-
-data class WasteCategoryUi(
-    val id: String,
-    val name: String,
-    val price: String,
-    val unit: String = "kg"
-)
+import com.example.satupilah.data.model.WasteCategoryUi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoryScreen(navController: NavController) {
+fun CategoryScreen(
+    navController: NavController = rememberNavController(),
+    viewModel: CategoryViewModel = viewModel()
+) {
+    val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var showAddCategoryBottomSheet by remember { mutableStateOf(false) }
 
-    val sampleCategories = listOf(
-        WasteCategoryUi("1", "Botol Plastik", "2.000"),
-        WasteCategoryUi("2", "Kardus / Karton", "2.000"),
-        WasteCategoryUi("3", "Kertas", "2.200"),
-        WasteCategoryUi("4", "Kaleng Aluminium", "13.000"),
-        WasteCategoryUi("5", "Besi", "5.000"),
-        WasteCategoryUi("6", "Seng", "2.500")
-    )
+    LaunchedEffect(Unit) {
+        viewModel.loadCategories()
+    }
+
+    val categoryList by viewModel.categories.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val successMessage by viewModel.successMessage.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    LaunchedEffect(successMessage, errorMessage) {
+        successMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+        errorMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+    }
+
+    val filteredCategories = remember(searchQuery, categoryList) {
+        if (searchQuery.isBlank()) categoryList
+        else categoryList.filter {
+            it.name.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -62,62 +81,88 @@ fun CategoryScreen(navController: NavController) {
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(bottom = padding.calculateBottomPadding())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(top = 19.dp, bottom = 24.dp)
-        ) {
-            item {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 0.dp, bottom = 8.dp)
-                ) {
-                    IconButton(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier.size(36.dp)
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(bottom = padding.calculateBottomPadding())
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(top = 19.dp, bottom = 24.dp)
+            ) {
+                item {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 0.dp, bottom = 8.dp)
                     ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
-                            tint = MaterialTheme.colorScheme.onSurface
+                        IconButton(
+                            onClick = { navController.popBackStack() },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Kembali",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Daftar Sampah",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Daftar Sampah",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = MaterialTheme.colorScheme.onSurface
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Cari Sampah") },
+                        trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        shape = RoundedCornerShape(28.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
                     )
+                }
+
+                item { Spacer(modifier = Modifier.height(4.dp)) }
+
+                if (filteredCategories.isEmpty() && !isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Tidak ada data kategori sampah",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    items(filteredCategories, key = { it.id }) { item ->
+                        CategoryCardListItem(
+                            category = item,
+                            onClick = {
+                                navController.navigate("category_detail/${item.id}")
+                            }
+                        )
+                    }
                 }
             }
 
-            item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Cari Sampah") },
-                    trailingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    shape = RoundedCornerShape(28.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(4.dp)) }
-
-            items(sampleCategories) { item ->
-                CategoryCardListItem(
-                    category = item,
-                    onClick = { /* TODO: Update Harga / Edit Kategori */ }
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
         }
@@ -127,7 +172,14 @@ fun CategoryScreen(navController: NavController) {
                 onDismissRequest = { showAddCategoryBottomSheet = false },
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
             ) {
-                AddCategoryBottomSheetContent(onDismiss = { showAddCategoryBottomSheet = false })
+                AddCategoryBottomSheetContent(
+                    onDismiss = { showAddCategoryBottomSheet = false },
+                    onSubmit = { name, price ->
+                        viewModel.createCategory(name, price) {
+                            showAddCategoryBottomSheet = false
+                        }
+                    }
+                )
             }
         }
     }
@@ -199,7 +251,10 @@ fun CategoryCardListItem(
 }
 
 @Composable
-fun AddCategoryBottomSheetContent(onDismiss: () -> Unit) {
+fun AddCategoryBottomSheetContent(
+    onDismiss: () -> Unit,
+    onSubmit: (name: String, price: Double) -> Unit
+) {
     var categoryNameInput by remember { mutableStateOf("") }
     var priceInput by remember { mutableStateOf("") }
 
@@ -239,7 +294,13 @@ fun AddCategoryBottomSheetContent(onDismiss: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick = { onDismiss() },
+            onClick = {
+                val priceDouble = priceInput.toDoubleOrNull() ?: 0.0
+                if (categoryNameInput.isNotBlank() && priceDouble > 0) {
+                    onSubmit(categoryNameInput.trim(), priceDouble)
+                }
+            },
+            enabled = categoryNameInput.isNotBlank() && priceInput.toDoubleOrNull() != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),

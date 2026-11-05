@@ -7,7 +7,6 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
@@ -23,10 +22,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.satupilah.ui.screens.staff.AdminScreen
+import com.example.satupilah.ui.screens.category.CategoryDetailScreen
 import com.example.satupilah.ui.screens.category.CategoryScreen
 import com.example.satupilah.ui.screens.history.HistoryScreen
 import com.example.satupilah.ui.screens.home.HomeScreen
+import com.example.satupilah.ui.screens.staff.AdminScreen
+import com.example.satupilah.ui.screens.staff.StaffProfileScreen
+import com.example.satupilah.ui.screens.user.UserDetailScreen
 import com.example.satupilah.ui.screens.user.UserScreen
 
 val PrimaryGreen = Color(0xFF005D52)
@@ -117,11 +119,33 @@ fun SatupilahMainScreen() {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) { HomeScreen(navController) }
-            composable(Screen.Users.route) { UserScreen() }
-            composable(Screen.History.route) { HistoryScreen() }
-            composable(Screen.Admin.route) { AdminScreen(navController) }
-            composable(Screen.Category.route) { CategoryScreen(navController) }
+            composable(Screen.Home.route) {
+                HomeScreen(navController = navController)
+            }
+            composable(Screen.Users.route) {
+                UserScreen(navController = navController)
+            }
+            composable("user_profile/{userId}") { backStackEntry ->
+                val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                UserDetailScreen(userId = userId, navController = navController)
+            }
+            composable(Screen.History.route) {
+                HistoryScreen()
+            }
+            composable(Screen.Admin.route) {
+                AdminScreen(navController = navController)
+            }
+            composable("staff_profile/{staffId}") { backStackEntry ->
+                val staffId = backStackEntry.arguments?.getString("staffId") ?: ""
+                StaffProfileScreen(adminId = staffId, navController = navController)
+            }
+            composable(Screen.Category.route) {
+                CategoryScreen(navController = navController)
+            }
+            composable("category_detail/{categoryId}") { backStackEntry ->
+                val categoryId = backStackEntry.arguments?.getString("categoryId") ?: ""
+                CategoryDetailScreen(categoryId = categoryId, navController = navController)
+            }
         }
     }
 }

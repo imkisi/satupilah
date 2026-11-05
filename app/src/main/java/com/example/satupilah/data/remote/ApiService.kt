@@ -46,7 +46,8 @@ interface ApiService {
     suspend fun createCategory(
         @Query("action") action: String = "create",
         @Field("category_name") categoryName: String,
-        @Field("price_per_kg") pricePerKg: Double
+        @Field("price_per_kg") pricePerKg: Double,
+        @Field("unit") unit: String = "kg"
     ): Response<ApiResponse>
 
     @FormUrlEncoded
@@ -55,7 +56,8 @@ interface ApiService {
         @Query("action") action: String = "update",
         @Field("category_id") categoryId: String,
         @Field("category_name") categoryName: String,
-        @Field("price_per_kg") pricePerKg: Double
+        @Field("price_per_kg") pricePerKg: Double,
+        @Field("unit") unit: String = "kg"
     ): Response<ApiResponse>
 
     @FormUrlEncoded
@@ -66,7 +68,7 @@ interface ApiService {
     ): Response<ApiResponse>
 
 
-    // ================= STAFF (PETUGAS) =================
+    // ================= STAFF (PETUGAS / ADMIN) =================
     @GET("api_staff.php")
     suspend fun getStaff(@Query("action") action: String = "read"): Response<StaffListResponse>
 
@@ -75,7 +77,6 @@ interface ApiService {
     suspend fun createStaff(
         @Query("action") action: String = "create",
         @Field("username") username: String,
-        @Field("password") password: String,
         @Field("full_name") fullName: String
     ): Response<ApiResponse>
 
@@ -83,7 +84,7 @@ interface ApiService {
     @POST("api_staff.php")
     suspend fun updateStaff(
         @Query("action") action: String = "update",
-        @Field("staff_id") staffId: String,
+        @Field("admin_id") adminId: String,
         @Field("username") username: String,
         @Field("full_name") fullName: String
     ): Response<ApiResponse>
@@ -92,7 +93,7 @@ interface ApiService {
     @POST("api_staff.php")
     suspend fun deleteStaff(
         @Query("action") action: String = "delete",
-        @Field("staff_id") staffId: String
+        @Field("admin_id") adminId: String
     ): Response<ApiResponse>
 
 
@@ -106,8 +107,8 @@ interface ApiService {
         @Query("action") action: String = "create",
         @Field("user_id") userId: String,
         @Field("category_id") categoryId: String,
-        @Field("staff_id") staffId: String,
-        @Field("weight_kg") weightKg: Double
+        @Field("admin_id") adminId: String,
+        @Field("weight") weight: Double
     ): Response<ApiResponse>
 
 
@@ -120,7 +121,8 @@ interface ApiService {
     suspend fun createWithdrawal(
         @Query("action") action: String = "create",
         @Field("user_id") userId: String,
-        @Field("staff_id") staffId: String,
-        @Field("amount") amount: Double
+        @Field("admin_id") adminId: String,
+        @Field("amount") amount: Double,
+        @Field("payment_method") paymentMethod: String = "Tunai"
     ): Response<ApiResponse>
 }

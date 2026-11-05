@@ -1,5 +1,6 @@
 package com.example.satupilah.ui.screens.home
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -7,11 +8,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -23,73 +22,88 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.satupilah.Screen
-
-enum class HomeTransactionType {
-    DEPOSIT, WITHDRAWAL
-}
-
-data class HomeTransactionUi(
-    val id: String,
-    val type: HomeTransactionType,
-    val date: String,
-    val time: String,
-    val amount: String,
-    val userName: String,
-    val itemsDetail: List<String> = emptyList()
-)
+import com.example.satupilah.data.model.AdminUi
+import com.example.satupilah.data.model.UserUiModel
+import com.example.satupilah.data.model.WasteCategoryUi
+import com.example.satupilah.ui.screens.history.HistoryCardItem
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(
+    navController: NavController,
+    viewModel: HomeViewModel = viewModel()
+) {
+    val context = LocalContext.current
     var isFabExpanded by remember { mutableStateOf(false) }
     var showTimbangBottomSheet by remember { mutableStateOf(false) }
     var showPencairanBottomSheet by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadDashboardData()
+    }
+
+    LaunchedEffect(showTimbangBottomSheet, showPencairanBottomSheet) {
+        if (showTimbangBottomSheet || showPencairanBottomSheet) {
+            viewModel.loadDashboardData()
+        }
+    }
 
     val rotationAngle by animateFloatAsState(
         targetValue = if (isFabExpanded) 45f else 0f,
         label = "FabRotation"
     )
 
-    val sampleTransactions = listOf(
-        HomeTransactionUi(
-            id = "1",
-            type = HomeTransactionType.DEPOSIT,
-            date = "23 September",
-            time = "08.46",
-            amount = "Rp75,000",
-            userName = "Jane Doe Abdulsalam",
-            itemsDetail = listOf("Karton · 728g", "Botol Plastik · 210g", "Botol Kaca · 328g")
-        ),
-        HomeTransactionUi(
-            id = "2",
-            type = HomeTransactionType.DEPOSIT,
-            date = "23 September",
-            time = "08.46",
-            amount = "Rp75,000",
-            userName = "Jane Doe Abdulsalam",
-            itemsDetail = listOf("Karton · 728g", "Botol Plastik · 210g")
-        ),
-        HomeTransactionUi(
-            id = "3",
-            type = HomeTransactionType.WITHDRAWAL,
-            date = "23 September",
-            time = "08.46",
-            amount = "Rp120,000",
-            userName = "Jane Doe Abdulsalam"
-        )
-    )
+    val transactions by viewModel.transactions.collectAsState()
+    val userList by viewModel.users.collectAsState()
+    val categoryList by viewModel.categories.collectAsState()
+    val staffList by viewModel.staffList.collectAsState()
+    val totalWeight by viewModel.totalWeightKg.collectAsState()
+    val totalValue by viewModel.totalValueRp.collectAsState()
+    val successMessage by viewModel.successMessage.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    LaunchedEffect(successMessage, errorMessage) {
+        successMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessages()
+        }
+        errorMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearMessages()
+        }
+    }
+
+    val greetingText = remember {
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        when (hour) {
+            in 4..10 -> "Selamat Pagi"
+            in 11..14 -> "Selamat Siang"
+            in 15..18 -> "Selamat Sore"
+            else -> "Selamat Malam"
+        }
+    }
+
+    val todayDateStr = remember {
+        val sdf = SimpleDateFormat("EEEE, d MMMM", Locale("id", "ID"))
+        sdf.format(Date())
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -113,6 +127,7 @@ fun HomeScreen(navController: NavController) {
                             containerColor = MaterialTheme.colorScheme.primary,
                             onClick = {
                                 isFabExpanded = false
+                                viewModel.loadDashboardData()
                                 showTimbangBottomSheet = true
                             }
                         )
@@ -123,6 +138,7 @@ fun HomeScreen(navController: NavController) {
                             containerColor = MaterialTheme.colorScheme.primary,
                             onClick = {
                                 isFabExpanded = false
+                                viewModel.loadDashboardData()
                                 showPencairanBottomSheet = true
                             }
                         )
@@ -157,7 +173,7 @@ fun HomeScreen(navController: NavController) {
         ) {
             item {
                 Text(
-                    text = "Selamat Pagi",
+                    text = greetingText,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Normal,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -180,19 +196,19 @@ fun HomeScreen(navController: NavController) {
                     ) {
                         Column {
                             Text(
-                                text = "Rabu, 23 September",
+                                text = todayDateStr,
                                 fontSize = 16.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(32.dp))
                             Text(
-                                text = "0,99kg",
+                                text = "${String.format(Locale("id", "ID"), "%.2f", totalWeight)}kg",
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Rp124.102",
+                                text = "Rp${String.format(Locale("id", "ID"), "%,d", totalValue.toInt()).replace(',', '.')}",
                                 fontSize = 28.sp,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
@@ -232,12 +248,12 @@ fun HomeScreen(navController: NavController) {
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top= 8.dp)
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
 
-            items(sampleTransactions) { transaction ->
-                HomeHistoryCardItem(item = transaction)
+            items(transactions, key = { it.id }) { transaction ->
+                HistoryCardItem(item = transaction)
             }
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -250,7 +266,15 @@ fun HomeScreen(navController: NavController) {
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
             ) {
                 TimbangBottomSheetContent(
-                    onDismiss = { showTimbangBottomSheet = false }
+                    userList = userList,
+                    categoryList = categoryList,
+                    staffList = staffList,
+                    onDismiss = { showTimbangBottomSheet = false },
+                    onSubmit = { userId, categoryId, staffId, weightKg ->
+                        viewModel.createDeposit(userId, categoryId, staffId, weightKg) {
+                            showTimbangBottomSheet = false
+                        }
+                    }
                 )
             }
         }
@@ -262,7 +286,14 @@ fun HomeScreen(navController: NavController) {
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
             ) {
                 PencairanBottomSheetContent(
-                    onDismiss = { showPencairanBottomSheet = false }
+                    userList = userList,
+                    staffList = staffList,
+                    onDismiss = { showPencairanBottomSheet = false },
+                    onSubmit = { userId, staffId, amount ->
+                        viewModel.createWithdrawal(userId, staffId, amount) {
+                            showPencairanBottomSheet = false
+                        }
+                    }
                 )
             }
         }
@@ -272,10 +303,24 @@ fun HomeScreen(navController: NavController) {
 // Measure Bottom Sheet
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimbangBottomSheetContent(onDismiss: () -> Unit) {
-    var selectedNasabah by remember { mutableStateOf("") }
-    var selectedKategori by remember { mutableStateOf("") }
-    var beratInput by remember { mutableStateOf("") }
+fun TimbangBottomSheetContent(
+    userList: List<UserUiModel>,
+    categoryList: List<WasteCategoryUi>,
+    staffList: List<AdminUi>,
+    onDismiss: () -> Unit,
+    onSubmit: (userId: String, categoryId: String, staffId: String, weightKg: Double) -> Unit
+) {
+    var selectedUser by remember { mutableStateOf<UserUiModel?>(null) }
+    var selectedCategory by remember { mutableStateOf<WasteCategoryUi?>(null) }
+    var selectedStaff by remember { mutableStateOf<AdminUi?>(staffList.firstOrNull()) }
+    var beratGramInput by remember { mutableStateOf("") }
+
+    var userDropdownExpanded by remember { mutableStateOf(false) }
+    var categoryDropdownExpanded by remember { mutableStateOf(false) }
+    var staffDropdownExpanded by remember { mutableStateOf(false) }
+
+    val weightGrams = beratGramInput.toDoubleOrNull() ?: 0.0
+    val weightKg = weightGrams / 1000.0
 
     Column(
         modifier = Modifier
@@ -291,38 +336,162 @@ fun TimbangBottomSheetContent(onDismiss: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        OutlinedTextField(
-            value = selectedNasabah,
-            onValueChange = { selectedNasabah = it },
-            label = { Text("Pilih Nasabah") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
-        )
+        // Dropdown Pilih Nasabah
+        ExposedDropdownMenuBox(
+            expanded = userDropdownExpanded,
+            onExpandedChange = { userDropdownExpanded = !userDropdownExpanded },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = selectedUser?.let { "${it.name} (Saldo: ${it.balance})" } ?: "",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Pilih Nasabah") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = userDropdownExpanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            )
+            ExposedDropdownMenu(
+                expanded = userDropdownExpanded,
+                onDismissRequest = { userDropdownExpanded = false }
+            ) {
+                userList.forEach { user ->
+                    DropdownMenuItem(
+                        text = { Text("${user.name} (${user.phoneNumber})") },
+                        onClick = {
+                            selectedUser = user
+                            userDropdownExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        // Dropdown Kategori Sampah
+        ExposedDropdownMenuBox(
+            expanded = categoryDropdownExpanded,
+            onExpandedChange = { categoryDropdownExpanded = !categoryDropdownExpanded },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = selectedCategory?.let { "${it.name} (Rp${it.price}/${it.unit})" } ?: "",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Kategori Sampah") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryDropdownExpanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            )
+            ExposedDropdownMenu(
+                expanded = categoryDropdownExpanded,
+                onDismissRequest = { categoryDropdownExpanded = false }
+            ) {
+                categoryList.forEach { category ->
+                    DropdownMenuItem(
+                        text = { Text("${category.name} - Rp${category.price}/${category.unit}") },
+                        onClick = {
+                            selectedCategory = category
+                            categoryDropdownExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        // Dropdown Petugas
+        if (staffList.isNotEmpty()) {
+            ExposedDropdownMenuBox(
+                expanded = staffDropdownExpanded,
+                onExpandedChange = { staffDropdownExpanded = !staffDropdownExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedStaff?.fullName ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Petugas Penanggung Jawab") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = staffDropdownExpanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                ExposedDropdownMenu(
+                    expanded = staffDropdownExpanded,
+                    onDismissRequest = { staffDropdownExpanded = false }
+                ) {
+                    staffList.forEach { staff ->
+                        DropdownMenuItem(
+                            text = { Text("${staff.fullName} (@${staff.username})") },
+                            onClick = {
+                                selectedStaff = staff
+                                staffDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
 
         OutlinedTextField(
-            value = selectedKategori,
-            onValueChange = { selectedKategori = it },
-            label = { Text("Kategori Sampah") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
-        )
-
-        OutlinedTextField(
-            value = beratInput,
-            onValueChange = { beratInput = it },
-            label = { Text("Berat Sampah (kg)") },
+            value = beratGramInput,
+            onValueChange = { beratGramInput = it },
+            label = { Text("Berat Sampah (gram / g)") },
+            placeholder = { Text("Contoh: 500 (untuk 0.5 kg)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp)
         )
 
+        // Live Auto Calculation Display
+        if (selectedCategory != null && weightGrams > 0) {
+            val priceClean = selectedCategory?.price?.replace(".", "")?.replace(",", ".")?.toDoubleOrNull() ?: 0.0
+            val totalPrice = (weightKg * priceClean).toInt()
+
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Estimasi Total Pendapatan:",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Rp${String.format(Locale("id", "ID"), "%,d", totalPrice).replace(',', '.')}",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "(${String.format(Locale("id", "ID"), "%.3f", weightKg)} kg × Rp${selectedCategory?.price}/${selectedCategory?.unit})",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = {
-                // TODO: Proses Simpan Timbangan ke Database
-                onDismiss()
+                val userId = selectedUser?.userId ?: ""
+                val categoryId = selectedCategory?.id ?: ""
+                val staffId = selectedStaff?.id ?: "1"
+
+                if (userId.isNotBlank() && categoryId.isNotBlank() && weightKg > 0) {
+                    onSubmit(userId, categoryId, staffId, weightKg)
+                }
             },
+            enabled = selectedUser != null && selectedCategory != null && weightGrams > 0,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -333,10 +502,20 @@ fun TimbangBottomSheetContent(onDismiss: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PencairanBottomSheetContent(onDismiss: () -> Unit) {
-    var selectedNasabah by remember { mutableStateOf("") }
+fun PencairanBottomSheetContent(
+    userList: List<UserUiModel>,
+    staffList: List<AdminUi>,
+    onDismiss: () -> Unit,
+    onSubmit: (userId: String, staffId: String, amount: Double) -> Unit
+) {
+    var selectedUser by remember { mutableStateOf<UserUiModel?>(null) }
+    var selectedStaff by remember { mutableStateOf<AdminUi?>(staffList.firstOrNull()) }
     var nominalInput by remember { mutableStateOf("") }
+
+    var userDropdownExpanded by remember { mutableStateOf(false) }
+    var staffDropdownExpanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -352,18 +531,79 @@ fun PencairanBottomSheetContent(onDismiss: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        OutlinedTextField(
-            value = selectedNasabah,
-            onValueChange = { selectedNasabah = it },
-            label = { Text("Pilih Nasabah") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
-        )
+        // Dropdown Pilih Nasabah
+        ExposedDropdownMenuBox(
+            expanded = userDropdownExpanded,
+            onExpandedChange = { userDropdownExpanded = !userDropdownExpanded },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = selectedUser?.let { "${it.name} (${it.balance})" } ?: "",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Pilih Nasabah") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = userDropdownExpanded) },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp)
+            )
+            ExposedDropdownMenu(
+                expanded = userDropdownExpanded,
+                onDismissRequest = { userDropdownExpanded = false }
+            ) {
+                userList.forEach { user ->
+                    DropdownMenuItem(
+                        text = { Text("${user.name} - Saldo: ${user.balance}") },
+                        onClick = {
+                            selectedUser = user
+                            userDropdownExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        // Dropdown Petugas
+        if (staffList.isNotEmpty()) {
+            ExposedDropdownMenuBox(
+                expanded = staffDropdownExpanded,
+                onExpandedChange = { staffDropdownExpanded = !staffDropdownExpanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedStaff?.fullName ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Petugas Penanggung Jawab") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = staffDropdownExpanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                ExposedDropdownMenu(
+                    expanded = staffDropdownExpanded,
+                    onDismissRequest = { staffDropdownExpanded = false }
+                ) {
+                    staffList.forEach { staff ->
+                        DropdownMenuItem(
+                            text = { Text("${staff.fullName} (@${staff.username})") },
+                            onClick = {
+                                selectedStaff = staff
+                                staffDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
 
         OutlinedTextField(
             value = nominalInput,
             onValueChange = { nominalInput = it },
             label = { Text("Nominal Pencairan (Rp)") },
+            placeholder = { Text("Masukkan nominal rupiah") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp)
@@ -373,9 +613,15 @@ fun PencairanBottomSheetContent(onDismiss: () -> Unit) {
 
         Button(
             onClick = {
-                // TODO: Proses Pencairan Saldo ke Database
-                onDismiss()
+                val amountDouble = nominalInput.toDoubleOrNull() ?: 0.0
+                val userId = selectedUser?.userId ?: ""
+                val staffId = selectedStaff?.id ?: "1"
+
+                if (userId.isNotBlank() && amountDouble > 0) {
+                    onSubmit(userId, staffId, amountDouble)
+                }
             },
+            enabled = selectedUser != null && (nominalInput.toDoubleOrNull() ?: 0.0) > 0,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -433,108 +679,6 @@ fun ShortcutNavigationCard(
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.size(16.dp)
             )
-        }
-    }
-}
-
-@Composable
-fun HomeHistoryCardItem(item: HomeTransactionUi) {
-    val isDeposit = item.type == HomeTransactionType.DEPOSIT
-    val cardBg = if (isDeposit) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.primaryContainer
-    val iconVector: ImageVector = if (isDeposit) Icons.Default.Recycling else Icons.Default.Payments
-    val titleText = if (isDeposit) "Setor Sampah" else "Pencairan Saldo"
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(20.dp)
-                .fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = iconVector,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Text(
-                            text = titleText,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "${item.date} · ${item.time}",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                        .border(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                            shape = RoundedCornerShape(50)
-                        )
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = item.amount,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = item.userName,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            if (isDeposit && item.itemsDetail.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    item.itemsDetail.forEach { detail ->
-                        Text(
-                            text = detail,
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            lineHeight = 14.sp
-                        )
-                    }
-                }
-            }
         }
     }
 }
